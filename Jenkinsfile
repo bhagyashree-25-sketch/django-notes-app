@@ -1,34 +1,37 @@
 pipeline {
     agent any 
-    
-    stages{
-        stage("Clone Code"){
+    stages {
+        stage ("code cloning") {
             steps {
-                echo "Cloning the code"
-                git url:"https://github.com/LondheShubham153/django-notes-app.git", branch: "main"
+                echo "cloning the code from github"
+                git branch: 'main', url: 'https://github.com/bhagyashree-25-sketch/django-notes-app.git'
             }
         }
-        stage("Build"){
+        stage ("build") {
             steps {
-                echo "Building the image"
-                sh "docker build -t my-note-app ."
+                echo "building the code using docker file"
+                sh "docker build -t my-note-app ." 
             }
         }
-        stage("Push to Docker Hub"){
+        stage ("pushing image to dockerhub") {
             steps {
-                echo "Pushing the image to docker hub"
-                withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
-                sh "docker tag my-note-app ${env.dockerHubUser}/my-note-app:latest"
+                echo "pushing image to dockerhub"
+          withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]) {
                 sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                sh "docker push ${env.dockerHubUser}/my-note-app:latest"
+                sh "docker tag my-note-app ${env.dockerhubUser}/my-note-app:microdegree"
+                sh "docker push ${env.dockerhubUser}/my-note-app:microdegree"
                 }
             }
         }
-        stage("Deploy"){
+        stage ("deploy to kubernetes") {
             steps {
-                echo "Deploying the container"
-                
+                dir ("notesapp") {
+                    withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kuberenetes', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+                    sh "kubectl apply -f deployment.yaml"
+                    sh "kubectl apply -f service.yaml"
+                    }
+                }
             }
-        }
+        }    
     }
 }
